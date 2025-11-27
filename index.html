@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IoT Dashboard by Kelompok 3</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <!-- Custom Style -->
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(to bottom right, #0f172a, #1e293b);
+      }
+
+      .doy-card {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(74, 222, 128, 0.1);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s ease;
+      }
+
+      .doy-card::after {
+        content: "";
+        position: absolute;
+        height: 100%;
+      }
+
+      .doy-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(74, 222, 128, 0.3);
+      }
+
+      .doy-pill {
+        transition: all 0.3s ease;
+      }
+
+      .doy-pill.active {
+        background: rgba(60, 184, 222, 0.2);
+        border-left: 3px solid #60a5fa;
+      }
+
+      .doy-badge {
+        background: rgba(74, 222, 128, 0.1);
+      }
+
+      .doy-badge.animate {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+
+        50% {
+          transform: scale(1.05);
+          opacity: 0.7;
+        }
+      }
+
+      .signature {
+        font-family: "Bad Script", cursive;
+        color: #60a5fa;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen flex items-center justify-center p-4 text-white">
+    <div
+      class="w-full max-w-6xl rounded-2xl overflow-hidden shadow-xl flex flex-col md:flex-row bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700/50"
+    >
+      <!-- Sidebar -->
+      <aside
+        class="p-6 w-full md:w-64 flex-shrink-0 border-r border-gray-700/50"
+      >
+        <div class="flex items-center space-x-3 mb-10">
+          <div class="p-3 bg-blue-500/10 rounded-xl">
+            <i class="fas fa-heart text-blue-400 text-xl"></i>
+          </div>
+          <h2 class="text-xl font-bold text-white">
+            <span class="text-blue-400">IoT</span>Dash
+          </h2>
+        </div>
+        <nav class="space-y-2">
+          <a
+            href="#"
+            class="doy-pill active flex items-center space-x-3 px-4 py-3 rounded-lg text-white"
+          >
+            <i class="fas fa-fire text-blue-400 w-5"></i><span>Live Data</span>
+          </a>
+          <a
+            href="#"
+            class="doy-pill flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white"
+          >
+            <i class="fas fa-cogs w-5"></i><span>Settings</span>
+          </a>
+          <a
+            href="history.html"
+            class="doy-pill flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white"
+          >
+            <i class="fas fa-history w-5"></i><span>History</span>
+          </a>
+        </nav>
+        <div class="mt-auto pt-8 text-xs text-gray-400 text-center">
+          Dibuat dengan <i class="fas fa-heart text-red-400 mx-1"></i> oleh
+          <span class="signature">Zhapip</span>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="flex-1 p-6 md:p-8">
+        <!-- Header -->
+        <header class="mb-8">
+          <h1 class="text-2xl md:text-3xl font-bold text-white">
+            Selamat Datang di <span class="text-blue-400">IoT Dashboard</span>
+          </h1>
+          <p class="text-gray-400 mt-2">Monitoring dengan simpel</p>
+        </header>
+
+        <!-- Cards -->
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Temperature -->
+          <div class="doy-card rounded-xl p-6">
+            <div
+              class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+            >
+              <h2>
+                <i class="fas fa-thermometer-half text-red-400 mr-2"></i>SUHU
+                RUANGAN
+              </h2>
+            </div>
+            <div class="flex items-center justify-between mb-4">
+              <p
+                id="temperature"
+                class="temperature text-4xl font-bold text-red-400 mb-1"
+              ></p>
+              <i
+                id="fanIcon"
+                class="fas fa-fan fa-2x text-white animate-spin"
+              ></i>
+            </div>
+            <p class="timestamp text-xs text-gray-400">
+              <i class="far fa-clock mr-1"></i>Updated:
+              <span id="timestamp">Just Now</span>
+            </p>
+          </div>
+
+          <!-- Humidity -->
+          <div class="doy-card rounded-xl p-6">
+            <div
+              class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+            >
+              <h2>
+                <i class="fas fa-tint text-blue-400 animate-bounce mr-2"></i
+                >KELEMBAPAN
+              </h2>
+              <span
+                id="beat"
+                class="text-xs bg-blue-900/30 text-blue-400 px-2 py-1 rounded-full fa-beat"
+                >Stable</span
+              >
+            </div>
+            <p
+              id="humidity"
+              class="humidity text-4xl font-bold text-blue-300 mb-1"
+            >
+              %
+            </p>
+            <p class="text-xs text-gray-400">
+              <i class="fas fa-info-circle mr-1"></i>Ideal range: 40-70%
+            </p>
+          </div>
+
+          <!-- CO -->
+          <div class="doy-card rounded-xl p-6">
+            <div
+              class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+            >
+              <h2>
+                <i class="fas fa-cloud-sun text-green-400 mr-2"></i>CO (Carbon
+                Monoxide)
+              </h2>
+            </div>
+            <p id="co" class="text-4xl font-bold text-green-400 mb-1">PPM</p>
+          </div>
+
+          <!-- CO2 -->
+          <div class="doy-card rounded-xl p-6">
+            <div
+              class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+            >
+              <h2>
+                <i class="fas fa-cloud text-blue-400 mr-2"></i>CO2 (Carbon
+                Dioxide)
+              </h2>
+            </div>
+            <p id="co2" class="text-4xl font-bold text-blue-300 mb-1">PPM</p>
+          </div>
+
+          <!-- NH4 -->
+          <div class="doy-card rounded-xl p-6">
+            <div
+              class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+            >
+              <h2>
+                <i class="fas fa-cloud-rain text-yellow-400 mr-2"></i>NH4
+                (Ammonia)
+              </h2>
+            </div>
+            <p id="nh4" class="text-4xl font-bold text-yellow-300 mb-1">PPM</p>
+          </div>
+        </section>
+
+        <!-- Face Recognition Status -->
+        <div class="doy-card rounded-xl p-6 col-span-1 md:col-span-3">
+          <div
+            class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+          >
+            <h2>
+              <i class="fas fa-user-check text-green-400 mr-2"></i>Status
+              Pemilik Rumah
+            </h2>
+          </div>
+          <p
+            id="faceStatus"
+            class="text-2xl font-bold text-center py-4 text-gray-300"
+          >
+            Menunggu deteksi wajah...
+          </p>
+        </div>
+
+        <!-- Kontrol Relay -->
+        <div class="doy-card rounded-xl p-6 mt-6">
+          <div
+            class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+          >
+            <h2>
+              <i class="fas fa-power-off text-purple-400 mr-2"></i>Kontrol Kipas
+            </h2>
+          </div>
+          <button
+            id="toggleRelay"
+            onclick="toggleRelay()"
+            class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-semibold"
+          >
+            Turn ON
+          </button>
+        </div>
+
+        <!-- Kontrol Lampu -->
+        <div class="doy-card rounded-xl p-6 mt-6">
+          <div
+            class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+          >
+            <h2>
+              <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Kontrol Lampu
+            </h2>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <button
+              id="toggleLamp"
+              onclick="toggleLamp()"
+              class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded-lg font-semibold"
+            >
+              Lampu 1 ON
+            </button>
+          </div>
+        </div>
+        <!-- Kontrol Lampu -->
+        <div class="doy-card rounded-xl p-6 mt-6">
+          <div
+            class="flex items-center justify-between mb-4 text-sm font-medium text-gray-400"
+          >
+            <h2><i class="fas fa-lightbulb text-yellow-400 mr-2"></i>Camera</h2>
+          </div>
+          <!-- <img id="cam" src="http://10.192.195.247:81/stream"style="width:50%; border-radius:10px;"> -->
+          <img src="http://10.192.195.247/capture" alt="" />
+        </div>
+
+        <!-- Footer -->
+        <div
+          class="mt-10 pt-6 border-t border-gray-700/30 text-center text-xs text-gray-500"
+        >
+          Dashboard ini dibuat dengan
+          <i class="fas fa-heart text-red-400 mx-1"></i> oleh
+          <span class="signature">Zhapip</span>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const video = document.getElementById("cam");
+      video.src = "http://10.192.195.247:81/stream";
+
+      const client = mqtt.connect("ws://10.218.20.169:9001");
+      let lampStatus = 0;
+      let fanStatus = 0;
+
+      client.on("connect", () => {
+        console.log("✅ Terhubung ke MQTT Broker");
+        client.subscribe("iot/monitoring");
+        client.subscribe("iot/lamp/status");
+        client.subscribe("iot/fan/status");
+        client.subscribe("iot/face/status");
+      });
+
+      // ================= CONTROL LAMPU =================
+      function toggleLamp() {
+        const data = { status: lampStatus === 1 ? "OFF" : "ON" };
+        client.publish("iot/lamp/cmd", JSON.stringify(data));
+        console.log("📤 Kirim Lampu:", data);
+      }
+
+      function updateLampButtons() {
+        const btn = document.getElementById("toggleLamp");
+        if (!btn) return;
+        if (lampStatus === 1) {
+          btn.textContent = "💡 Turn OFF";
+          btn.classList.add("bg-yellow-500");
+          btn.classList.remove("bg-gray-500");
+        } else {
+          btn.textContent = "💡 Turn ON";
+          btn.classList.add("bg-gray-500");
+          btn.classList.remove("bg-yellow-500");
+        }
+      }
+
+      // ================= CONTROL KIPAS =================
+      function toggleRelay() {
+        const data = { status: fanStatus === 1 ? "OFF" : "ON" };
+        client.publish("iot/fan/cmd", JSON.stringify(data));
+        console.log("📤 Kirim Kipas:", data);
+      }
+
+      function updateFanButton() {
+        const btn = document.getElementById("toggleRelay");
+        if (!btn) return;
+        if (fanStatus === 1) {
+          btn.textContent = "🌀 Turn OFF";
+          btn.classList.add("bg-green-600");
+          btn.classList.remove("bg-purple-600");
+        } else {
+          btn.textContent = "🌀 Turn ON";
+          btn.classList.add("bg-purple-600");
+          btn.classList.remove("bg-green-600");
+        }
+      }
+
+      function updateFaceStatus(data) {
+        const el = document.getElementById("faceStatus");
+
+        if (!el) return;
+
+        if (data.status === "authorized") {
+          el.textContent = "✔ Selamat datang, Tuan 👑";
+          el.className = "text-2xl font-bold text-center py-4 text-green-400";
+        } else if (data.status === "unauthorized") {
+          el.textContent = "❌ Anda bukan pemilik rumah 🚫";
+          el.className = "text-2xl font-bold text-center py-4 text-red-400";
+        } else {
+          el.textContent = "⏳ Wajah belum terdeteksi";
+          el.className = "text-2xl font-bold text-center py-4 text-yellow-300";
+        }
+      }
+
+      // ================= TERIMA DATA MQTT =================
+      client.on("message", (topic, message) => {
+        try {
+          const data = JSON.parse(message.toString());
+
+          if (topic === "iot/monitoring") {
+            document.getElementById("temperature").textContent =
+              data.suhu ?? "-";
+            document.getElementById("humidity").textContent =
+              data.kelembapan ?? "-";
+            document.getElementById("co").textContent = data.gas.co ?? "-";
+            document.getElementById("co2").textContent = data.gas.co2 ?? "-";
+            document.getElementById("nh4").textContent = data.gas.nh4 ?? "-";
+            document.getElementById("timestamp").textContent =
+              new Date().toLocaleString();
+          }
+
+          if (topic === "iot/lamp/status") {
+            lampStatus = data.status === "ON" ? 1 : 0;
+            updateLampButtons();
+          }
+
+          if (topic === "iot/fan/status") {
+            fanStatus = data.status === "ON" ? 1 : 0;
+            updateFanButton();
+          }
+
+          if (topic === "iot/face/status") {
+            updateFaceStatus(JSON.parse(message.toString()));
+          }
+        } catch (err) {
+          console.error("❌ Error parsing JSON:", err);
+        }
+      });
+    </script>
+  </body>
+</html>
